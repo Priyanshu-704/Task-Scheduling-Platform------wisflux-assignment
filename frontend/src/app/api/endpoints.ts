@@ -133,6 +133,10 @@ export const extendedApiSlice = apiSlice.injectEndpoints({
       query: ({ workspaceId, taskId }) => `/workspaces/${workspaceId}/tasks/${taskId}`,
       providesTags: (_1, _2, { taskId }) => [{ type: 'Task', id: taskId }],
     }),
+    getSubtaskTree: builder.query({
+      query: ({ workspaceId, taskId }) => `/workspaces/${workspaceId}/tasks/${taskId}/tree`,
+      providesTags: (_1, _2, { taskId }) => [{ type: 'Task', id: taskId }],
+    }),
     createTask: builder.mutation({
       query: ({ workspaceId, projectId, ...body }) => ({
         url: `/workspaces/${workspaceId}/projects/${projectId}/tasks`,
@@ -228,6 +232,7 @@ export const {
   useDeleteProjectMutation,
   useGetTasksQuery,
   useGetTaskByIdQuery,
+  useGetSubtaskTreeQuery,
   useCreateTaskMutation,
   useUpdateTaskMutation,
   useDeleteTaskMutation,

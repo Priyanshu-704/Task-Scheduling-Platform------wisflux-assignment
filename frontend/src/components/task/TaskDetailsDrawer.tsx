@@ -24,6 +24,8 @@ import {
   useGetCommentsQuery,
   useAddCommentMutation,
   useGetWorkspaceMembersQuery,
+  useGetSubtaskTreeQuery,
+  useCreateTaskMutation,
 } from '../../app/api/endpoints';
 import Loader from '../common/Loader';
 
@@ -48,13 +50,37 @@ export const TaskDetailsDrawer: React.FC = () => {
     { skip: !activeWorkspaceId || !taskId }
   );
 
+  const { data: subtaskTree } = useGetSubtaskTreeQuery(
+    { workspaceId: activeWorkspaceId!, taskId: taskId! },
+    { skip: !activeWorkspaceId || !taskId }
+  );
+
   const [updateTask] = useUpdateTaskMutation();
   const [addComment] = useAddCommentMutation();
+  const [createTask] = useCreateTaskMutation();
 
   const [commentText, setCommentText] = useState('');
+  const [subtaskTitle, setSubtaskTitle] = useState('');
 
   const handleClose = () => {
     dispatch(setSelectedTaskId(null));
+  };
+
+  const handleAddSubtask = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!subtaskTitle.trim() || !task) return;
+    try {
+      await createTask({
+        workspaceId: activeWorkspaceId!,
+        projectId: task.projectId,
+        title: subtaskTitle,
+        parentTaskId: taskId!,
+      }).unwrap();
+      setSubtaskTitle('');
+      enqueueSnackbar('Subtask created successfully', { variant: 'success' });
+    } catch (err: any) {
+      enqueueSnackbar(err.data?.message || 'Failed to create subtask', { variant: 'error' });
+    }
   };
 
   const handleFieldChange = async (field: string, value: any) => {
@@ -212,6 +238,64 @@ export const TaskDetailsDrawer: React.FC = () => {
                 />
               </Grid>
             </Grid>
+
+            <Divider sx={{ my: 3 }} />
+
+            {/* Subtasks Section */}
+            <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>Subtasks</Typography>
+            <Box component="form" onSubmit={handleAddSubtask} sx={{ display: 'flex', gap: 1, mb: 3 }}>
+              <TextField
+                placeholder="Add subtask..."
+                size="small"
+                fullWidth
+                value={subtaskTitle}
+                onChange={(e) => setSubtaskTitle(e.target.value)}
+              />
+              <IconButton type="submit" color="primary" disabled={!subtaskTitle.trim()}>
+                <SendIcon fontSize="small" />
+              </IconButton>
+            </Box>
+
+            <List disablePadding sx={{ mb: 3 }}>
+              {subtaskTree?.subTasks && subtaskTree.subTasks.length > 0 ? (
+                subtaskTree.subTasks.map((st: any) => (
+                  <Card 
+                    key={st.id} 
+                    sx={{ 
+                      mb: 1, 
+                      p: 1.5, 
+                      border: '1px solid', 
+                      borderColor: 'divider',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      cursor: 'pointer',
+                      '&:hover': { bgcolor: 'action.hover' }
+                    }}
+                    onClick={() => dispatch(setSelectedTaskId(st.id))}
+                  >
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                      {st.title}
+                    </Typography>
+                    <Typography variant="caption" sx={{ 
+                      px: 1, 
+                      py: 0.2, 
+                      borderRadius: 1, 
+                      bgcolor: st.status === 'DONE' ? 'success.light' : 'action.disabledBackground',
+                      color: st.status === 'DONE' ? 'success.contrastText' : 'text.secondary',
+                      fontSize: '0.7rem',
+                      fontWeight: 600
+                    }}>
+                      {st.status}
+                    </Typography>
+                  </Card>
+                ))
+              ) : (
+                <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                  No subtasks created yet.
+                </Typography>
+              )}
+            </List>
 
             <Divider sx={{ my: 3 }} />
 
